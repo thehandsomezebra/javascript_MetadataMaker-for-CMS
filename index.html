@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Metadata Maker v1.0</title>	
+    <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.no-icons.min.css" rel="stylesheet" type="text/css">
+    <link href="index.css" rel="stylesheet" type="text/css">
+	    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js" type="text/javascript"></script>
+    <script src="mindmup-editabletable.js" type="text/javascript"></script>
+	<script type="text/javascript" src="plupload.js"></script>
+    <script type="text/javascript" src="plupload.html5.js"></script>
+    <script type="text/javascript">
+/////////set up the basic headings
+var heading = new Array();
+heading[0] = "filename"
+heading[1] = "nb-asset-type"
+heading[2] = "title"
+heading[3] = "alt-text"
+heading[4] = "caption-text"
+heading[5] = "credit"
+heading[6] = "nb-collection-title-display"
+heading[7] = "video-resolution-label"
+heading[8] = "video-inline-pixel-height"
+heading[9] = "video-inline-pixel-width"
+heading[10] = "video-native-pixel-height"
+heading[11] = "video-native-pixel-width"
+heading[12] = "video-bitrate"
+$(document).ready(function() {
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Drop handler function to get all files
+var dataholder = []
+
+
+async function getAllFileEntries(dataTransferItemList) {
+  let fileEntries = [];
+  // Use BFS to traverse entire directory/file structure
+  let queue = [];
+  // Unfortunately dataTransferItemList is not iterable i.e. no forEach
+  for (let i = 0; i < dataTransferItemList.length; i++) {
+    queue.push(dataTransferItemList[i].webkitGetAsEntry());
+  }
+  while (queue.length > 0) {
+    let entry = queue.shift();
+    if (entry.isFile) {
+      ///////This is where we load the entries into an array
+	  var tempholderarray = [entry.fullPath,"","","","","","","","","","","",""]
+      rows.push(tempholderarray)
+//      console.log(rows.fullPath)
+      fileEntries.push(entry);
+    } else if (entry.isDirectory) {
+      let reader = entry.createReader();
+      queue.push(...await readAllDirectoryEntries(reader));
+    }
+  }
+  return fileEntries;
+}
+
+// Get all the entries (files or sub-directories) in a directory by calling readEntries until it returns empty array
+async function readAllDirectoryEntries(directoryReader) {
+  let entries = [];
+  let readEntries = await readEntriesPromise(directoryReader);
+  while (readEntries.length > 0) {
+    entries.push(...readEntries);
+    //console.log(entries)
+    readEntries = await readEntriesPromise(directoryReader);
+  }
+  return entries;
+}
+
+// Wrap readEntries in a promise to make working with readEntries easier
+async function readEntriesPromise(directoryReader) {
+  try {
+    return await new Promise((resolve, reject) => {
+      directoryReader.readEntries(resolve, reject);
+    });
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+var elDrop = document.getElementById('drop-target');
+//var elItems = document.getElementById('items');
+var elItems
+
+
+elDrop.addEventListener('dragover', function (event) {
+    event.preventDefault();
+    elItems = 0;
+	// Reset array of rows
+    rows = [];
+});
+
+elDrop.addEventListener('drop', async function (event) {
+	// Reset array of rows
+    rows = [];
+
+    event.preventDefault();
+    let items = await getAllFileEntries(event.dataTransfer.items);
+    elItems = items.length;
+  console.log(items.length)
+   
+
+    ///used to debug :)
+    console.log("OPTION: LOAD FROM FILES. Data has been added for the following files:")
+	//rows.shift() //remove the first one...because it's blank
+    console.log(rows)
+	console.log(rows.length)
+	
+	
+    var changetheinsidetext = document.getElementById('drop-target');
+    changetheinsidetext.textContent = ("Total loaded items: " + elItems);
+	document.getElementById("Step1Button").style.backgroundColor = "";
+	document.getElementById("Step1Button").style.color = "";	
+    document.getElementById("Step1Button").click();	
+	document.getElementById("Step2Button").style.backgroundColor = "khaki";
+	document.getElementById("Step2Button").style.color = "black";		
+			if (!document.getElementById("Step2Button").classList.contains("activec")) {
+			document.getElementById("Step2Button").click();	
+			}
+
+  console.log(rows)
+  addTable(rows)
+  
+});
+//////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    var coll = document.getElementsByClassName("collapsible");
+    var i;
+    for (i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function() {
+            this.classList.toggle("activec");
+            var content = this.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
+    }
+    //Set up the default tab: Get the element with id="defaultOpen" and click on it
+    document.getElementById("defaultOpen").click();
+    document.getElementById("Step1Button").click();
+	document.getElementById("Step1Button").style.backgroundColor = "khaki";
+	document.getElementById("Step1Button").style.color = "black";	
+    //easter egg: if you click on the header, it'll change to the old logo
+    $('#easteregg').click(function() {
+        $('#easteregg').html('<img src=metadata.png> maker <sup>v1.0</sup>');
+    });
+    //Set up the initial load of the table
+    var rows = new Array()
+    rows[0] = new Array("", "", "", "", "", "", "", "", "", "", "", "", "")
+    ///used to debug :)
+    //console.log(rows)
+    //Initialize the uploader       
+   /////// uploader.init();
+    addTable(rows)
+    //this sets up the import to CSV option
+    document.querySelector('input[type="file"]')
+        .addEventListener('change', function() {
+            var files = this.files;
+            for (var i = 0; i < files.length; i++) {
+				/////use convert_it(data) instead?
+
+                parseCSV(files[i], ',', function(results) {
+				
+                    ///used to debug :)
+                    console.log("OPTION: LOAD FROM CSV. Pulling in data from a CSV:")
+                    console.log(results);
+					
+					
+                    ////Set up the combined array... We'll add things one line at a time.
+                    var combinedArray = []
+                    var filenameholder = FillHolderArray(results, "absolute-path-filename") //filename
+                    var assettypeholder = FillHolderArray(results, "nB Asset Type") //nb-asset-type
+                    var titleholder = FillHolderArray(results, "Title") //title
+                    var alttextholder = FillHolderArray(results, "Alternate Text") //alt-text
+                    var captionholder = FillHolderArray(results, "Caption Text") //caption-text
+                    var creditholder = FillHolderArray(results, "Credit") //credit
+                    var collectionholder = FillHolderArray(results, "nB Asset Collection Name") //nb-collection-title-display
+                    var resolutionholder = FillHolderArray(results, "Video Resolution nB Label") //video-resolution-label
+                    var inlineheightholder = FillHolderArray(results, "Inline Height (pixels)") //video-inline-pixel-height
+                    var inlinewidthholder = FillHolderArray(results, "Inline Width (pixels)") //video-inline-pixel-width
+                    var nativeheightholder = FillHolderArray(results, "Video Native Height (pixels)") //video-native-pixel-height
+                    var nativewidthholder = FillHolderArray(results, "Video Native Width (pixels)") //video-native-pixel-width
+                    var bitrateholder = FillHolderArray(results, "Bitrate (Kbps)") //video-bitrate
+                    /////combine it all in the right order
+                    combinedArray.push(filenameholder)
+                    combinedArray.push(assettypeholder)
+                    combinedArray.push(titleholder)
+                    combinedArray.push(alttextholder)
+                    combinedArray.push(captionholder)
+                    combinedArray.push(creditholder)
+                    combinedArray.push(collectionholder)
+                    combinedArray.push(resolutionholder)
+                    combinedArray.push(inlineheightholder)
+                    combinedArray.push(inlinewidthholder)
+                    combinedArray.push(nativeheightholder)
+                    combinedArray.push(nativewidthholder)
+                    combinedArray.push(bitrateholder)
+                    console.log("CSV has been parsed into the following data:")
+                    //console.log(combinedArray);
+                    //console.log(combinedArray.length);
+                    //console.log(combinedArray[0].length);
+                    console.log(transposeArray(combinedArray));
+                    rows = transposeArray(combinedArray)
+					///If the rows has an empty row anywhere (typically at the end), let's get rid of it.
+					for (var i = 0; i < rows.length; i++) {
+						if (!rows[i][0]) {
+							//console.log("Found a blank!!")
+							//console.log(rows[i])
+							//delete rows[i]
+							rows.splice(i, 1)
+							i--;
+						}
+					}
+                    var changetheinsidetext = document.getElementById('loadedsuccesscsv');
+                    changetheinsidetext.textContent = "Loaded.";
+					document.getElementById("Step1Button").style.backgroundColor = "";
+					document.getElementById("Step1Button").style.color = "";	
+					document.getElementById("Step1Button").click();	
+					document.getElementById("Step2Button").style.backgroundColor = "khaki";
+					document.getElementById("Step2Button").style.color = "black";		
+			if (!document.getElementById("Step2Button").classList.contains("activec")) {
+			document.getElementById("Step2Button").click();	
+			}
+                    //and make a table with it
+                    addTable(rows)
+                });
+            }
+        })
+    $("#ExportToCSVButton").on('click', function(event) {
+	
+        exportTableToCSV.apply(this, [$('#mainTable'), 'export.csv']);
+        // Note: #ExportToCSVButton must be a hyperlink
+        // IF CSV, don't do event.preventDefault() or return false
+        // We actually need this to be a typical hyperlink
+    });
+    ///run auto fixes
+    $('#AutoFixes').click(function(e) {
+        //call auto fixes
+        console.log("Applying basic metadata to the following data:")
+        console.log(rows)
+        AutoFixes()
+		
+		document.getElementById("Step2Button").style.backgroundColor = "";
+		document.getElementById("Step2Button").style.color = "";	
+		document.getElementById("Step2Button").click();	
+		document.getElementById("Step3Button").style.backgroundColor = "khaki";
+		document.getElementById("Step3Button").style.color = "black";		
+			if (!document.getElementById("Step3Button").classList.contains("activec")) {
+			document.getElementById("Step3Button").click();	
+			}
+    });
+    ///Click for search n replace///
+    $('#replace').click(function(e) {
+        rows = GrabFromHTMLTable()
+        var pattern = $("#pattern").val();
+        var replace = $("#replacement").val();
+        //rows = ReplaceInTheRows(rows,pattern,replace)
+        addTable(ReplaceInTheRows(rows, pattern, replace))
+    });
+});
+////////////////////////////////////////////////////////////////////////////////////////              
+//////////////////////////////////////FUNCTIONS/////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////    
+/////This function gives a popup to show a thing in a little tooltip-like box
+function tooltippopup(notenumber) {
+    var popup = document.getElementById(notenumber);
+    popup.classList.toggle("show");
+}/////////If you've got an array that goes one way, but you want it the other way.... this will transpose it.
+function transposeArray(array) {
+    var newArray = [];
+    for (var i = 0; i < array[0].length; i++) {
+        newArray.push([]);
+    };
+    for (var i = 0; i < array.length; i++) {
+        for (var j = 0; j < array[0].length; j++) {
+            newArray[j].push(array[i][j]);
+        };
+    };
+    return newArray;
+}///////////This scrapes an array for a header name and then makes a new array with just that column alone.  Combine them all and transpose them to make a smaller array!
+function FillHolderArray(results, columnheader) {
+    var array = new Array
+    //var rows= new Array
+    var flagtripped = false
+    for (var i = 0; i < results[0].length; i++) {
+        var result = results[i]
+        if (results[0][i] === columnheader || results[0][i].includes(columnheader)) {
+            flagtripped = true
+            for (var j = 1; j < results.length; j++) {
+                if (results[j][i]) {
+                    array.push(results[j][i])
+                } else {
+                    array.push("")
+                }
+            }
+        }
+    }
+	////Since there really shouldn't be any columns with the name HEADERNOTSETSKIPTOFLAG - it'll jump to here :)
+    if (flagtripped === false) {
+        //we'll fill these with blanks since the header doesn't exist... we don't want things going blank.
+		console.log("flag tripped for",columnheader)
+        for (var j = 1; j < results.length; j++) {
+            array.push(" ")
+        }
+    }
+    return array;
+}///////////This is used to Load CSV///////////////
+function parseCSV(file, delimiter, callback) {
+    var reader = new FileReader();
+    // When the FileReader has loaded the file...
+    reader.onload = function() {
+//In a future release - I may need to patch here:  
+//Sometimes CSVs have  " " with special characters between it.  
+//For now, we're ignoring them... but we need to really parse them out and strip out all the bad characters between them.   
+				var unformatted = this.result
+				var commas = unformatted.split(',').length - 1;
+    var tabs = unformatted.split('\t').length - 1;
+    if (commas > tabs)
+        //seperator = ',';
+        //seperator = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/;
+        seperator = /,\s*(?=(?:[^"]|"[^"]*")*$)/; // This is regex for matching commas not in quotes
+    var lines = unformatted.split(/\r?\n(?=(?:[^"]|"[^"]*")*$)/); // 9/17/2018 - Version 1.2a - Split at new lines not in quotes
+    // Reset array of rows
+    rows = [];
+    // Iterate through lines and put in 2D array 'rows'
+    for (var i = 0; i < lines.length; i++) {
+        rows[i] = lines[i].split(seperator);
+        for (var a = 0; a < rows[i].length; a++) {
+            // Remove quotes around cell if first and last character are a quote
+            if ((rows[i][a].charAt(0) == '"' && rows[i][a].charAt(rows[i][a].length - 1) == '"') ||
+                (rows[i][a].charAt(0) == "'" && rows[i][a].charAt(rows[i][a].length - 1) == "'")) {
+                rows[i][a] = rows[i][a].substr(1); // Remove first character
+                rows[i][a] = rows[i][a].slice(0, -1); // Remove last character	
+            }
+        }
+    }
+    /* Clean up: If there is a blank line at bottom of textarea
+		it is being put in the last row with as a blank array.
+		We need to remove it
+	*/
+    if (rows[rows.length - 1].length == 1 && rows[rows.length - 1][0] == "")
+        rows.pop();
+    //console.log(rows)
+        callback(rows);
+    }
+    // Read the file content as a single string
+    reader.readAsText(file);
+}///////////This is used to EXPORT the current displayed table to CSV File////////////
+function exportTableToCSV($table, filename) {
+    var $rows = $table.find('tr:has(td),tr:has(th)'),
+        // Temporary delimiter characters unlikely to be typed by keyboard..this is to avoid accidentally splitting the actual contents
+        tmpColDelim = String.fromCharCode(11), // vertical tab character
+        tmpRowDelim = String.fromCharCode(0), // null character
+        // actual delimiter characters for CSV format
+        colDelim = ',',
+        rowDelim = '\n',
+        // Grab text from table into CSV formatted string
+        csv = '' + $rows.map(function(i, row) {
+            var $row = $(row),
+                $cols = $row.find('td,th');
+            return $cols.map(function(j, col) {
+                var $col = $(col),
+                    text = $col.text();
+                return text.replace(/"/g, '""'); // escape double quotes
+            }).get().join(tmpColDelim);
+        }).get().join(tmpRowDelim)
+        .split(tmpRowDelim).join(rowDelim)
+        .split(tmpColDelim).join(colDelim) + '',
+        // Data URI
+        csvData = 'data:application/csv;charset=utf-8,' + encodeURIComponent(csv);
+    ///used to debug :)
+    console.log(csv);
+    if (window.navigator.msSaveBlob) { // IE 10+
+        //alert('IE' + csv);
+        window.navigator.msSaveOrOpenBlob(new Blob([csv], {
+            type: "text/plain;charset=utf-8;"
+        }), "csvname.csv")
+    } else {
+        $(this).attr({
+            'download': filename,
+            'href': csvData,
+            'target': '_blank'
+        });
+    }
+}///////////This function populates the table///////////////
+///////////ROWS is the array of data from either the CSV or the list of files dropped./////
+function addTable(rows) {
+    //clear out the body of the table, if there's anything in there...
+    $("#mainTable tbody").remove();
+    $("#mainTable thead").remove();
+    var myTableDiv = document.getElementById("tablediv")
+    var table = document.getElementById("mainTable")
+    var tableBody = document.createElement('TBODY')
+    table.appendChild(tableBody);
+	//////tidy up the data first...line breaks and tabs that really shouldn't be in there...
+	///:( If we have line breaks, it breaks when we export - so yeah...ditch them asap.
+	for(var i = 0; i < rows.length; ++i){
+	var row = rows[i]
+	for(var j = 0; j < row.length; ++j){
+    row[j] = row[j].toString().replace(/(\r\n|\n|\r)/gm,"")
+	}
+	}
+    ///used to debug :)
+    console.log("running the addTable function with the following data:")
+    console.log(rows)	
+    //TABLE COLUMNS
+    var tr = document.createElement('TR');
+    tableBody.appendChild(tr);
+    for (i = 0; i < heading.length; i++) {
+        var th = document.createElement('TH')
+        th.width = '75';
+        th.appendChild(document.createTextNode(heading[i]));
+        tr.appendChild(th);
+    }
+    //TABLE ROWS
+    for (i = 0; i < rows.length; i++) {
+        var tr = document.createElement('TR');
+        for (j = 0; j < rows[i].length; j++) {
+            var td = document.createElement('TD')
+            td.appendChild(document.createTextNode(rows[i][j]));
+            tr.appendChild(td)
+        }
+        tableBody.appendChild(tr);
+    }
+    myTableDiv.appendChild(table)
+    //The next three lines allow for it to be editable!!
+    $('#mainTable').editableTableWidget().focus();
+    $('#textAreaEditor').editableTableWidget({
+        editor: $('<textarea>')
+    });
+    window.prettyPrint && prettyPrint();
+}/////////////////////This switches the tabs////////////////
+function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}///////////////CREATE THE TABLE FROM DRAGGED AND DROPPED FILES//////////////
+//var uploader = new plupload.Uploader({
+//    runtimes: 'html5',
+//    drop_element: 'drop-target',
+//    browse_button: 'drop-target'
+//});
+//uploader.bind('Init', function(up, params) {
+//    var target = $("drop-target");
+//    target.ondragover = function(event) {
+//        event.dataTransfer.dropEffect = "copy";
+//    };
+//    target.ondragenter = function() {
+//        this.className = "dragover";
+//    };
+//    target.ondragleave = function() {
+//        this.className = "";
+//    };
+//    target.ondrop = function() {
+//        this.className = "";
+//    };
+//});
+//uploader.bind('FilesAdded', function(up, files) {
+//    //make the rows array
+//    rows = []
+//    ///////Load the rows array with the stuff that got dragged and dropped:
+//    for (var i in files) {
+//        rows[i] = new Array(files[i].relativePath)
+//    }
+//    ///used to debug :)
+//    console.log("OPTION: LOAD FROM FILES. Data has been added for the following files:")
+//    console.log(rows)
+//    for (var i = 0; i < rows.length; i++) {
+//        var row = rows[i]
+//        row[1] = ""
+//        row[2] = ""
+//        row[3] = ""
+//        row[4] = ""
+//        row[5] = ""
+//        row[6] = ""
+//        row[7] = ""
+//        row[8] = ""
+//        row[9] = ""
+//        row[10] = ""
+//        row[11] = ""
+//        row[12] = ""
+//    }
+//    var changetheinsidetext = document.getElementById('drop-target');
+//    changetheinsidetext.textContent = "Loaded.";
+//	document.getElementById("Step1Button").style.backgroundColor = "";
+//	document.getElementById("Step1Button").style.color = "";	
+//    document.getElementById("Step1Button").click();	
+//	document.getElementById("Step2Button").style.backgroundColor = "khaki";
+//	document.getElementById("Step2Button").style.color = "black";		
+//			if (!document.getElementById("Step2Button").classList.contains("activec")) {
+//			document.getElementById("Step2Button").click();	
+//			}
+//	
+//    addTable(rows)
+//    //   ApplyBasicMetadata(rows)
+//});
+
+
+
+
+
+function replaceBulk(str, findArray, replaceArray) {
+    var i, regex = [],
+        map = {};
+    for (i = 0; i < findArray.length; i++) {
+        regex.push(findArray[i].replace(/([-[\]{}()*+?.\\^$|#,])/g, '\\$1'));
+        map[findArray[i]] = replaceArray[i];
+    }
+    regex = regex.join('|');
+    str = str.replace(new RegExp(regex, 'g'), function(matched) {
+        return map[matched];
+    });
+    return str;
+} ///////////Send the rows, the pattern and what it'll be replaced with and it'll do a search n replace on the whole array.//////
+function ReplaceInTheRows(rows, pattern, replace) {
+    console.log("Running replace method for '" + pattern + "' for '" + replace + "' on the following data:")
+    console.log(rows)
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i]
+        for (var j = 0; j < row.length; j++) {
+            row[j] = replaceBulk(row[j], [pattern], [replace])
+        }
+    }
+    return rows
+}function ApplyBasicMetadata(rows) {
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i]
+        var file = {};
+        file.name = row[0].split('/')[row[0].split('/').length-1];
+        file.parts = row[0].split('.');
+        file.ext = file.parts.slice(-1).toString();
+        file.nameArray = row[0].split('_');
+        ///if it's an MP4 file, let's get the quality too.
+        file.quality = (file.ext === 'mp4') ? file.nameArray.slice(-1)[0].split('.').slice(0, -1).toString() : 'lo';
+        switch (file.ext) {
+            case "mp4":
+                ///Note: not going to use if-filled statements, because this should be standard... and if it's wrong - it should be updated to this:
+                if (file.quality === "hi") {
+                    row[7] = "high"; //"video-resolution-label"
+                    row[1] = "video (high res.)" //"nb-asset-type"
+                    row[8] = 600; //"video-inline-pixel-height"
+                    row[9] = 800; //"video-inline-pixel-width"
+                    row[10] = 600; //"video-native-pixel-height"
+                    row[11] = 800; //"video-native-pixel-width"
+                    row[12] = 768; //"video-bitrate"
+                } else if (file.quality === "med") {
+                    row[7] = "medium"; //"video-resolution-label"
+                    row[1] = "video (medium res.)"; //"nb-asset-type"
+                    row[8] = 360; //"video-inline-pixel-height"
+                    row[9] = 480; //"video-inline-pixel-width"
+                    row[10] = 360; //"video-native-pixel-height"
+                    row[11] = 480; //"video-native-pixel-width"
+                    row[12] = 512; //"video-bitrate"
+                } else {
+                    row[7] = "low"; //"video-resolution-label"
+                    row[1] = "video (low res.)"; //"nb-asset-type"
+                    row[8] = 240; //"video-inline-pixel-height"
+                    row[9] = 320; //"video-inline-pixel-width"
+                    row[10] = 240; //"video-native-pixel-height"
+                    row[11] = 320; //"video-native-pixel-width"
+                    row[12] = 256; //"video-bitrate"
+                }
+                break;
+            case "xml":
+                row[1] = "video closed-caption file"; //"nb-asset-type"
+                break;
+            case "vtt":
+                row[1] = "video closed-caption file"; //"nb-asset-type"
+                break;
+            case "jpg":
+                if (file.name.includes("t2") || file.name.includes("t3")) {
+                    row[1] = "inline image"
+                } else if (row[0].includes("video") ) {
+                    row[1] = "video poster image"; //"nb-asset-type"
+                } else {
+                    row[1] = "image"
+                }
+                break;	
+			case "png":
+                if (file.name.includes("t2") || file.name.includes("t3")) {
+                    row[1] = "inline image"
+                } else if (row[0].includes("video") ) {
+                    row[1] = "video poster image"; //"nb-asset-type"
+                } else {
+                    row[1] = "image"
+                }
+                break;	
+            case "txt":
+                row[1] = "video transcript"; //"nb-asset-type"
+                break;
+            case "html":
+			console.log(file.name)
+			
+			 if (file.name === "index.html") {
+                    row[1] = "html landing page"; //"nb-asset-type"
+                } else {
+                    row[1] = "html component"; //"nb-asset-type"
+                }
+                break;
+            case "css":
+				row[1] = "html component"; //"nb-asset-type"
+				break;
+            case "js":
+				row[1] = "html component"; //"nb-asset-type"
+				break;
+            case "json":
+				row[1] = "html component"; //"nb-asset-type"
+				break;
+            case "ico":
+				row[1] = "html component"; //"nb-asset-type"
+				break;
+            case "svn":
+				row[1] = "html component"; //"nb-asset-type"
+				break;
+            case "swf":
+				row[1] = "flash"; //"nb-asset-type"
+				break;
+            case "mp3":
+				row[1] = "audio"; //"nb-asset-type"
+				break;
+            case "ogg":
+				row[1] = "audio"; //"nb-asset-type"
+				break;
+               
+            default:
+                row[1] = "generic"; //"nb-asset-type"
+                break;
+        }
+        ////This is the new copyright... everything should get this now.
+        row[5] = "Copyright &copy; Cengage" //"credit"
+        ///If it didn't come in with values, let's fill it in:
+        if (!row[6]) {
+            row[6] = "false" //"nb-collection-title-display"
+        }
+		if (!row[7]) {
+            row[7] = "low"; //"video-resolution-label"
+        }
+    }
+    addTable(rows)
+}function GrabFromHTMLTable() {
+    var rows = [];
+    $("#mainTable tr").each(function() {
+        var arrayOfThisRow = [];
+        var tableData = $(this).find('td');
+        if (tableData.length > 0) {
+            tableData.each(function() {
+                arrayOfThisRow.push($(this).text());
+            });
+            rows.push(arrayOfThisRow);
+        }
+    });
+    return rows
+}////////////Run fixes//////////////
+function AutoFixes() {
+    ///////Scrape from the table that's visible!
+    rows = GrabFromHTMLTable()
+    console.log("this is the stuff currently in the table:")
+    console.log(rows); // alerts the entire array
+    ApplyBasicMetadata(rows)
+}/////////////////////////////////////////////////////////////////////////////
+///////////////////////////LOAD LPG SEQUENCE HERE////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+var LPGTextEntry = '';
+var finished = '';
+var original = '';
+// make array of lpgrows
+var lpgrows = [];
+function convert_it() {
+
+
+    /* Note: In Excel spreadsheets lpgrows are horizontal and labeled with numbers
+    	Columns are vertical labeled with letters
+    	Note: To put a quote in a CSV file you use two quotes as in: , "Black ""Bear"" Diner",
+    */
+    var seperator = '\t'; // Separate data by tabs or commas
+    LPGTextEntry = document.getElementById('LPGTextEntry').value;
+    // If they converted once and finished text is in finished
+    // and is the same as what is in the LPGTextEntry, then change LPGTextEntry back to original
+    if (finished == LPGTextEntry)
+        LPGTextEntry = original;
+    else
+        original = document.getElementById('LPGTextEntry').value;
+    /* Count how many commas or tabs are in string.  
+    	If there are more commas than we will assume the data is comma separated
+    */
+
+
+	//remove the linebreaks if they are encased between a quote.  This ignores single quotes!
+	LPGTextEntry = LPGTextEntry.replace(/(\t"[^"\n]*)\r?\n(?=[^"]*"\t)/g,'$1 ')
+	//console.log("This is after we have removed the pagebreaks between quotes")
+	//console.log(LPGTextEntry)
+	//and now we'll remove all of the regular stray quotes
+	//LPGTextEntry = LPGTextEntry.replace(/"/g,'')
+	//console.log("This is after we remove all double quotes")
+	//console.log(LPGTextEntry)
+      /* Count how many commas or tabs are in string.  
+    	If there are more commas than we will assume the data is comma separated */
+    var commas = LPGTextEntry.split(',').length - 1;
+    var tabs = LPGTextEntry.split('\t').length - 1;
+	console.log(commas)
+	console.log(tabs)
+    if (commas > tabs)
+        //seperator = ',';
+        //seperator = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/;
+        seperator = /,\s*(?=(?:[^"]|"[^"]*")*$)/; // This is regex for matching commas not in quotes
+    //var lines = LPGTextEntry.split(/\r?\n(?=(?:[^"]|"[^"]*")*$)/); // 9/17/2018 - Version 1.2a - Split at new lines not in quotes
+	var lines = LPGTextEntry.split(/\r?\n/)
+    // Reset array of lpgrows
+    lpgrows = [];
+    // Iterate through lines and put in 2D array 'lpgrows'
+    for (var i = 0; i < lines.length; i++) {
+        lpgrows[i] = lines[i].split(seperator);
+        for (var a = 0; a < lpgrows[i].length; a++) {
+            // Remove quotes around cell if first and last character are a quote
+            if ((lpgrows[i][a].charAt(0) == '"' && lpgrows[i][a].charAt(lpgrows[i][a].length - 1) == '"') ||
+                (lpgrows[i][a].charAt(0) == "'" && lpgrows[i][a].charAt(lpgrows[i][a].length - 1) == "'")) {
+                lpgrows[i][a] = lpgrows[i][a].substr(1); // Remove first character
+                lpgrows[i][a] = lpgrows[i][a].slice(0, -1); // Remove last character	
+            }
+        }
+    }
+    /* Clean up: If there is a blank line at bottom of textarea
+		it is being put in the last row with as a blank array.
+		We need to remove it
+	*/
+    if (lpgrows[lpgrows.length - 1].length == 1 && lpgrows[lpgrows.length - 1][0] == "")
+        lpgrows.pop();
+		console.log("This is the result from the CONVERT_IT function")
+    console.log(lpgrows)
+	 return lpgrows
+}/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+function RunThroughLPGInput(lpgrows, whichtask) {
+///////As of 7-3, these lines are no longer necessary. Fixed within convert_it()
+    ////////ugh, for whatever reason, people think it's cool to put linebreaks in LPGs... let's remove them first.
+    //////lpgrows = ReplaceInTheRows(lpgrows, "\r\n", " ")
+    //////lpgrows = ReplaceInTheRows(lpgrows, "\r", " ")
+    //////lpgrows = ReplaceInTheRows(lpgrows, "\n", " ")
+    ////////now replace two spaces with one... because sometimes people use linebreaks with a space...and sometimes it's no space and just a line break.
+    //////lpgrows = ReplaceInTheRows(lpgrows, "  ", " ")
+    //////console.log("show me what it looks like with linebreaks removed now")
+    //////console.log(lpgrows)
+    //Now let's cycle through the LPG rows to load up an array... we only want the following columns:  Level 1, 2, 3, 4, Asset Description and Source Filename
+    ////If they are pasting from the In-line assets, we will use Asset Title.  If they are using the Learning Path - we'll run through all the levels
+    ////I may need to add in something for A-Head/B-Head/C-Head... but I think this should be standard enough for now.
+	if (whichtask==="titles") {
+    for (var i = 0; i < lpgrows[0].length; i++) {
+        if (lpgrows[0][i].includes("Level 1")) {
+            var level1holder = FillHolderArray(lpgrows, "Level 1")
+			var level2holder = FillHolderArray(lpgrows, "Level 2")
+			var level3holder = FillHolderArray(lpgrows, "Level 3")
+			var level4holder = FillHolderArray(lpgrows, "Level 4")
+        } else if (lpgrows[0][i].includes("Asset Title")) {
+            var level1holder = FillHolderArray(lpgrows, "Asset Title")
+        }
+    }
+	}
+	else {
+	console.log("It's tripping this")
+			var level1holder = FillHolderArray(lpgrows, "HEADERNOTSETSKIPTOFLAG")
+			var level2holder = FillHolderArray(lpgrows, "HEADERNOTSETSKIPTOFLAG")
+			var level3holder = FillHolderArray(lpgrows, "HEADERNOTSETSKIPTOFLAG")
+			var level4holder = FillHolderArray(lpgrows, "HEADERNOTSETSKIPTOFLAG")
+			}
+if (whichtask==="captions") {
+		for (var i = 0; i < lpgrows[0].length; i++) {
+        if (lpgrows[0][i].includes("Asset Description (Student-Facing)")) {
+            var assetdescriptionholder = FillHolderArray(lpgrows, "Asset Description (Student-Facing)")
+        } else if (lpgrows[0][i].includes("Caption")) {
+            var assetdescriptionholder = FillHolderArray(lpgrows, "Caption")
+        }
+}
+    }
+else {
+var assetdescriptionholder = FillHolderArray(lpgrows, "HEADERNOTSETSKIPTOFLAG")
+}
+		 
+   // var sourcefilenameholder = FillHolderArray(lpgrows, "Source Filename")
+	//Majority of LPGs have "Source Filename" as the LPG title header... but Math with RM2 correlation LPGs use "Asset ID" as the filename
+	    for (var i = 0; i < lpgrows[0].length; i++) {
+        if (lpgrows[0][i].includes("Source Filename")) {
+            var sourcefilenameholder = FillHolderArray(lpgrows, "Source Filename")
+        } else if (lpgrows[0][i].includes("Asset ID")) {
+            var sourcefilenameholder = FillHolderArray(lpgrows, "Asset ID")
+        }		
+    }
+	
+	
+    ////I want to manipulate the "Source Filename" stuff -- I don't want any URL prefixes here.. Just the folder OR file name (for MP3..etc)	
+    for (var i = 0; i < sourcefilenameholder.length; i++) {
+        sourcefilenameholder[i]
+        var parts = sourcefilenameholder[i].split('/');
+        var lastSegment = parts.pop() || parts.pop(); // handle potential trailing slash
+        sourcefilenameholder[i] = lastSegment
+    }
+    var combinedArray = []
+    /////combine it all in the right order -- we'll put the filename first.
+    combinedArray.push(sourcefilenameholder)
+    ///ok ok cool cool cool. now lets take the levels 1, 2, 3, 4 and actually just make it into one thing..
+    var titleholder = []
+    for (var i = 0; i < level1holder.length; i++) {
+        if (level1holder[i]) {
+            titleholder.push(level1holder[i])
+        } else if (level2holder[i]) {
+            titleholder.push(level2holder[i])
+        } else if (level3holder[i]) {
+            titleholder.push(level3holder[i])
+        } else if (level4holder[i]) {
+            titleholder.push(level4holder[i])
+        } else titleholder.push("")
+    }
+    combinedArray.push(titleholder)
+    combinedArray.push(assetdescriptionholder)
+    console.log("this is the scrape from the LPG.")
+    console.log(combinedArray)
+    //transpose it
+    lpgrows = transposeArray(combinedArray)
+    //add the headers now that it's transposed.  oh, and the names are gunna be tightened up.... no need for the fluff anymore.
+    lpgrows.unshift(['SourceFilename', 'Title', 'AssetDescription']);
+    console.log("and now it's transposed and has headers.")
+    console.log(lpgrows)
+    //Now we will tighten up that array even more -- if the column's source filename is blank, get rid of it!
+    for (var i = 0; i < lpgrows.length; i++) {
+        if (!lpgrows[i][0]) {
+            //console.log("Found a blank!!")
+            //console.log(lpgrows[i])
+            //delete lpgrows[i]
+            lpgrows.splice(i, 1)
+            i--;
+        }
+    }
+    ///show what the tidy lpg looks like now
+    console.log("The tidied data from the LPG is now " + lpgrows.length + " rows long")
+    console.log(lpgrows)
+    return lpgrows
+}
+function AddTitlesFromLPG() {
+    //Pull in the LPG from the box into an array
+    var lpgrows = convert_it()
+    console.log(lpgrows)
+    //and pull in the stuff currently displayed in the table
+    rows = GrabFromHTMLTable()
+    lpgrows = RunThroughLPGInput(lpgrows, "titles")
+    //Ok so now, we gotta remember that the "filename" that's in the LPG is the folder name... or the file prefix.
+    for (var i = 0; i < rows.length; i++) {
+        var nametemporary = ""
+        //if it has a folder, let's  use that.
+        if (rows[i][0].includes("/")) {
+            if (rows[i][0].includes("video/")) {
+                nametemporary = rows[i][0].split('/')[1]
+            } else {
+                nametemporary = rows[i][0].split('/')[0]
+            }
+        }
+        for (var j = 0; j < lpgrows.length; j++) {
+            if (nametemporary === lpgrows[j][0]) {
+                //fill in the title which is  rows[2] and lpgrows[3]
+                rows[i][2] = lpgrows[j][1]
+            }
+        }
+    }
+    console.log(rows)
+    addTable(rows)
+	
+	document.getElementById("Step4Button").style.backgroundColor = "";
+	document.getElementById("Step4Button").style.color = "";	
+	
+		document.getElementById("ExportToCSVButton").style.backgroundColor = "khaki";
+		document.getElementById("ExportToCSVButton").style.color = "black";	
+		if (document.getElementById("TitlesFromLPGButton").style.backgroundColor = "khaki") {
+			document.getElementById("TitlesFromLPGButton").style.backgroundColor = "";
+			document.getElementById("TitlesFromLPGButton").style.color = "";	
+		}
+		
+}
+function AddCaptionsFromLPG() {
+    //Pull in the LPG from the box into an array
+    var lpgrows = convert_it()
+    console.log(lpgrows)
+    //and pull in the stuff currently displayed in the table
+    rows = GrabFromHTMLTable()
+    lpgrows = RunThroughLPGInput(lpgrows, "captions")
+    //Ok so now, we gotta remember that the "filename" that's in the LPG is the folder name... or the file prefix.
+    for (var i = 0; i < rows.length; i++) {
+        var nametemporary = ""
+        //if it has a folder, let's  use that.
+        if (rows[i][0].includes("/")) {
+            if (rows[i][0].includes("video/")) {
+                nametemporary = rows[i][0].split('/')[1]
+            } else {
+                nametemporary = rows[i][0].split('/')[0]
+            }
+        }
+        for (var j = 0; j < lpgrows.length; j++) {
+            if (nametemporary === lpgrows[j][0]) {
+                //fill in the caption which is rows[4] and lpgrows[2]
+                rows[i][4] = lpgrows[j][2]
+            }
+        }
+    }
+    console.log(rows)
+    addTable(rows)
+	
+	document.getElementById("Step4Button").style.backgroundColor = "";
+	document.getElementById("Step4Button").style.color = "";	
+		document.getElementById("ExportToCSVButton").style.backgroundColor = "khaki";
+		document.getElementById("ExportToCSVButton").style.color = "black";	
+		
+		if (document.getElementById("CaptionsFromLPGButton").style.backgroundColor = "khaki") {
+			document.getElementById("CaptionsFromLPGButton").style.backgroundColor = "";
+			document.getElementById("CaptionsFromLPGButton").style.color = "";	
+		}	
+}
+function NormalizePathsToLoadToVideoFolder() {
+    //if the filename has stuff like "/assets/cendoc-123/" <-- we need to remove that stuff.
+    rows = GrabFromHTMLTable()
+    //remove the assets folder folder.
+    ReplaceInTheRows(rows, "assets\/", "")
+    //remove the cendoc folder
+    for (var i = 0; i < rows.length; i++) {
+        if (rows[i][0].includes("cendoc")) {
+            rows[i][0] = rows[i][0].substring(rows[i][0].indexOf("/") + 1).trim()
+        }
+		
+			//if the first character is a SLASH, then we need to remove it.
+
+	while(rows[i][0].charAt(0) === '/')
+		{
+		rows[i][0] = rows[i][0].substr(1);
+		}
+    }
+    //remove the video/ folder
+    ReplaceInTheRows(rows, "video\/", "")
+	ReplaceInTheRows(rows, "html\/", "")
+	ReplaceInTheRows(rows, "book_images\/", "")
+
+	
+    console.log(rows)
+    addTable(rows)
+	
+		document.getElementById("Step3Button").style.backgroundColor = "";
+		document.getElementById("Step3Button").style.color = "";	
+		document.getElementById("Step3Button").click();
+		document.getElementById("Step4Button").style.backgroundColor = "khaki";
+		document.getElementById("Step4Button").style.color = "black";	
+			if (!document.getElementById("Step4Button").classList.contains("activec")) {
+			document.getElementById("Step4Button").click();	
+			}
+		document.getElementById("CaptionsFromLPGButton").style.backgroundColor = "khaki";
+		document.getElementById("CaptionsFromLPGButton").style.color = "black";
+		document.getElementById("TitlesFromLPGButton").style.backgroundColor = "khaki";
+		document.getElementById("TitlesFromLPGButton").style.color = "black";
+		
+	
+	
+}</script>
+  </head>
+  <body>
+    <div class="container">
+    <h2 id="easteregg">metadata maker <sup>v1.0</sup></h2>
+    <section class="hero-unit">
+	    <div class="wrapper tableontheside">
+        <h4>Editable Metadata Table
+	</h4>
+        <div id="tablediv" class="imacoolbox">
+            <table id="mainTable" class="table table-striped"></table>
+        </div>
+        <p>
+            <a href="#" id="ExportToCSVButton" class="UrSuchACoolButton button-glow">Export Table data</a>
+        </p>
+    </div>
+            <button class="collapsible" id="Step1Button">STEP 1: LOAD</button>
+            <div class="content">
+			<div id="one">
+                <p><i>Utilize two options: Loading from local files or load from a Geyser CSV Export.</i></p>
+                <p><b>&#183; Option 1:</b> Loading via <b>local files is easy</b>! Just click and drag a folder of videos to the dotted-box. You must be using Chrome for this functionality!<br>
+				<center><b>Recommended folder structure for drop for best results:</b>  <br>
+				&#9733; <i>/video/assets/__</i><br>
+				&#9733; <i>/html/assets/__</i><br>
+				&#9733; <i>/book_images/__</i></center>
+				</p>
+				<hr style="border: 1px solid black;">
+                <p><b>&#183; Option 2:</b> If your files are already loaded to Geyser, you can load from a <b>Geyser CSV Export</b>. <a href="https://wiki.cengage.com/display/DP/Export+metadata+from+Geyser">Please follow these instructions for how to download the CSV for use here</a>.</p>
+				</div>
+				<div id="two">
+                <div class="tab">
+                    <button class="tablinks" onclick="openTab(event, 'LoadFromFilesTab')" id="defaultOpen">Load from Files</button>
+                    <button class="tablinks" onclick="openTab(event, 'LoadCSVTab')">Load from CSV</button>
+                </div>
+                <div id="LoadCSVTab" class="tabcontent" style="height: 300px;text-align: center;">
+				<center>
+                    <span id="loadedsuccesscsv"><small>Please select a CSV file.</small> 
+					<div class="popup" onclick="tooltippopup('note1')">*
+						<span class="popuptext" id="note1">It must be at least 2 columns wide... and at least one of those should have the header of "absolute-path-filename". This is a known bug.</span>
+                </div>
+                </span>
+                <input type="file">
+				</center>
+            </div>
+			
+            <div id="LoadFromFilesTab" class="tabcontent" style="height: 300px;">
+                <div id="drop-target" class="changetextdraganddrop">
+                    Drop your local folders here.
+                    <br>
+                    <small>(Requires Chrome 21 or higher)</small>
+                </div>
+				
+            </div>
+			</div>
+        </div>
+        <button class="collapsible" id="Step2Button">STEP 2: AUTO FILL</button>
+        <div class="content">
+            <p>This will auto-fill basic metadata such as file type, video resolution, bitrate, etc.</p>
+            <p>
+                <a href="#" id="AutoFixes" class="UrSuchACoolButton">Perform Auto Fill for Metadata</a>
+            </p>
+        </div>
+       
+
+
+ <button class="collapsible" id="Step3Button">STEP 3: NORMALIZE PATHS</button>
+        <div class="content">
+            <p>Clicking the button below will normalize the filename to allow for upload to Geyser.</p>
+            <p>
+                <input type="button" name="convert" value="Normalize Paths" onclick="NormalizePathsToLoadToVideoFolder()" class="UrSuchACoolButton">
+            </p>
+        </div>
+        <button class="collapsible" id="Step4Button">STEP 4: LOAD LPG TITLES AND CAPTIONS</button>
+        <div class="content">
+		<div id="one">	
+            <p><i>Copy and paste from your LPG to load Titles and Captions!</i></p>
+            <p><b>&#183; Option 1:</b> If you are copying from the <b>Learning Path tab</b>, be sure that your headers include <u>Level&nbsp;1</u>, <u>Level&nbsp;2</u>, <u>Level&nbsp;3</u>, <u>Level&nbsp;4</u>, <u>Asset&nbsp;Description&nbsp;(Student-Facing)</u>, and <u>Source&nbsp;Filename.</u></p>
+            <p><b>&#183; Option 2:</b> If you are copying from the <b>In-line Assets tab</b>, be sure that your headers include <u>Asset&nbsp;Title</u>, <u>Caption</u>, and <u>Source&nbsp;Filename</u>.</p>
+			<p><b>&#183; Option 3:</b> If you are copying from a <b>Math RM2 Correlation LPG</b>, be sure that your headers include <u>Asset&nbsp;ID</u>, and <u>Asset&nbsp;Title</u>.</p>
+            <p><small>NOTES:<br>&#183; If you don't have captions - just don't click "Add Captions"! You can use this to add just titles alone.</small></p>
+            <p><small>&#183; If you don't have titles - just don't click "Add Titles"! You can use this to add just captions alone.</small></p>
+            <p><small>&#183; Your Source Filename can be either the asset folder name OR the entire asset URL.  Both options work just fine!</small></p>
+
+			</div>
+			<div id="two">	
+            <p>
+                <textarea class="InputLPG" id="LPGTextEntry" placeholder="Open your Excel LPG and Copy ALL data (Ctrl+A -> Ctrl+C). Paste it here (Ctrl+V) and click the buttons below." style="width:98%;"  rows="10"></textarea>
+                <input id="TitlesFromLPGButton" type="button" name="convert" value="Add Titles from LPG" onclick="AddTitlesFromLPG()" class="UrSuchACoolButton">
+                <input id="CaptionsFromLPGButton" type="button" name="convert" value="Add Captions from LPG" onclick="AddCaptionsFromLPG()" class="UrSuchACoolButton">
+            </p></div>
+        </div>
+        <button class="collapsible" style="background-color:steelblue">OPTIONAL: REGEX REPLACE</button>
+        <div class="content">
+            <p>You may use this as necessary to make additional adjustments.</p>
+            <p><small>NOTE: At this time, the search & replace will affect the ENTIRE table, not just the filenames.</small></p>
+            <p>
+                Pattern (regex allowed):
+                <input type="search" name="search" id="pattern">
+                <br> Replacement:
+                <input type="search" name="search" id="replacement">
+                <br>
+                <button id="replace" class="UrSuchACoolButton" type="button">Replace</button>
+            </p>
+        </div>
+		
+		
+		
+	</div>
+
+</section>
+</div>
+<script>
+</script>
+   <footer id="site_footer">
+   <small>&#169; Cengage</small><br>
+	<small class="vcard">v1.0: 2019 <a href="mailto:stephanie.frantz@cengage.com">Stephanie Frantz</a></small><br>
+	<!-- RELEASE NOTES: 
+	v1.0: 7-1-2019. New. Created by Stephanie Frantz.
+	work: stephanie.frantz@cengage.com
+	personal: stephlage@gmail.com
+	
+	NOTES:
+	Couldn't use old v0.4 code.  It was using an old plugin for some functionality...but it wasn't able to fully capture the needs of the DPS team.
+	-	 IMPROVED: Load from Drag and Drop 
+	-	 NEW: Load from CSV export from Geyser 
+	-	 IMPROVED: Add metadata to Video assets
+	-	 NEW: Add metadata to Book_Images assets 
+	-	 IMPROVED: Add metadata to HTML assets 
+	-	 NEW: Add Titles from LPG
+	-	 NEW: Add Captions from LPG
+	-	 NEW: Normalizing paths is now way easier (one click and it’d done!)
+	-	 IMPROVED: Regex replace now an OPTIONAL step, and it can change the entire set of data instead of just the filenames
+	-	 IMPROVED: The table updates with every step… and it’s fully editable!!
+	-	 IMPROVED: In 10 clicks or less you will have a CSV that you can upload to Geyser filled with all the metadata you need!!
+	
+	All code is new using primarily Javascript and a little bit of HTML5.
+	Old v0.4 beta is archived, but accessible by the link in the footer.
+
+
+	v1.0a 7-2-2019 PATCH. Stephanie Frantz
+	- Updated the LPG importer functionality to also allow for LPGs that are used in the Math Discipline for RM2 correlation charts.  Asset ID = the folder name of the HTML or Video.  Asset Title = the title of the asset.  There is no caption used in these instances.
+	
+	v1.0b 7-3-2019 PATCH. Stephanie Frantz
+	- From the previous update, there was also found an issue as such:  If you don't see all of the titles/captions that you were expecting, this might be due to a known bug! The issue lies with some special characters hidden within the LPG in other columns.  The workaround is to select and copy-and-paste ONLY the columns with the Asset, the Title, and/or the Caption.  This has now been fixed.
+	-  Adding captions only calls for the filename and caption to be present.
+	-  Adding titles only calls for the filename and the title to be present.
+	-  Previously, the above two would give an error if and stop if all 3 (title/filename/caption) weren't in existence.
+	
+	v1.0c 7-9-2019 PATCH. Stephanie Frantz
+	- Bug that led to an issue when filling from level 1/2/3/4 -- the FillHolderArray was filling with " " instead of ""... which was causing it to overwrite the title that actually did exist with a space. fixed.
+	
+	v1.0d 7-17-2019 PATCH. Stephanie Frantz
+	- In terms of loading the CSV back into geyser, there is an issue where if the video-resolution-label cell is left blank, it causes an error.  In the old v0.4, everything was blanketed with "low".  Despite certain items not being a low-res video (like a jpg).. these still need to be filled in.  Geyser still produces an erro and will not accept value "(unspecified)", so this patch as putting assets to "low" will eliminate this issue.
+	
+	v1.0e 7-17-2019 PATCH. Stephanie Frantz
+	- changed button "export table data to excel" to just "Export table data", since it is actually being exported as a csv... figured this would help people understand more.
+	
+	v1.0f 7-30-2019 PATCH. Stephanie Frantz
+	- Bug in the code existed when a user attempted to upload more than 100 files.  This was due to the function of readEntries would stop at 100...  We need to run that repeatedly foe rach directory that the program encounters to return allll of the files.  New logic has been implemented.  Also - updating to state quantity of files it has loaded.
+	
+	v1.0g 8-1-2019 PATCH. Stephanie Frantz
+	- Last fix created / at the front of each line -- removed them in Normalize by checking if the first character is a slash, remove it.
+	-->
+    <small class="vcard"><a href="v04beta/index.html">v0.4</a>: 2013 <a href="">James Fishwick</a></small>
+	</footer>
+  </body>
+</html>

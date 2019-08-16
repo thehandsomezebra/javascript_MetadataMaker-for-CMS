@@ -1,0 +1,738 @@
+<!doctype html>
+
+<html dir="ltr" lang="en_US">
+
+	<head>
+	
+		<meta charset="UTF-8">
+		
+		<title>Drag-and-drop metadata generator</title>
+	
+
+        <script src="http://cdn.cengage.com/libs/jquery/jquery-1.9.1.min.js"></script>
+        <script type='text/javascript' src='http://html5shiv.googlecode.com/svn/trunk/html5.js?ver=3.0.5'></script>
+		<script src="js/jquery.csv-0.71.min.js"></script>
+		<script src="js/jquery.handsontable.full.js"></script>
+		<script src="js/ucsv-1.1.0.js"></script>
+		<script>
+		
+window.myAppSettings	= {
+
+	htmlDirs: []
+
+}
+
+var Set = function() {}
+Set.prototype.add = function(o) { this[o] = true; }
+Set.prototype.remove = function(o) { delete this[o]; }
+
+//Object that models row of metadata
+
+function Asset(entry) {
+	
+	if (entry === null) {return}	
+
+    if (typeof entry.name === 'undefined') {
+        if (typeof entry.filename != 'undefined') {
+            entry.name = entry.filename;
+        } else {
+            return;
+        }
+    }
+    var file = {};
+	
+	file.name =  entry.name;
+    file.parts = entry.name.split('.');
+    file.ext = file.parts.slice(-1).toString();
+    file.nameArray = entry.name.split('_');
+    file.quality = (file.ext === 'mp4') ? file.nameArray.slice(-1)[0].split('.').slice(0,-1).toString() : 'lo';
+	file.fullPath = entry.fullPath || entry.name;
+	file.pathArray = file.fullPath.split( '/' );
+	file.path = file.pathArray.slice(0,-1).join('/');
+	
+	
+	
+	this.replacePaths = function (replacement,regex,flags) {
+		var re = new RegExp(regex, flags);
+		file.path = file.path.replace(re, replacement);
+		file.fullPath = file.path + '/'  + file.name;
+		file.pathArray = file.fullPath.split( '/' );
+	}
+	this.file = function () {console.dir(file)}
+    this.get = function(item) {
+        return (file[item]);
+    }
+	this.set = function(item,value) {
+		file[item] = value;
+	}
+    this.filename = entry.fullPath || entry.name;
+    this["nb-asset-type"] = 'UNKNOWN';
+    this["video-resolution-label"] = "low";
+    this["video-inline-pixel-height"] = null;
+    this["video-inline-pixel-width"] = null;
+    this["video-native-pixel-height"] = null;
+    this["video-native-pixel-width"] = null;
+    this["video-bitrate"] = null;
+    this["flash-pixel-height"] = null;
+    this["flash-pixel-width"] = null;
+    this["flash-version"] = null;
+    this["flash-params"] = null;
+    this["flash-variables"] = null;
+    this.setter = function() {
+        for (var prop in arguments[0]) {
+            if (prop in this) {
+                this[prop] = arguments[0][prop];
+            }
+        }
+    };
+	
+	
+    switch (file.ext) {
+    case "mp4":
+        this["nb-asset-type"] = "video";
+        if (file.quality === "hi") {
+            this["video-resolution-label"] = "high";
+            this["nb-asset-type"] += " (high res.)";
+            this["video-inline-pixel-height"] = 600;
+            this["video-inline-pixel-width"] = 800;
+            this["video-native-pixel-height"] = 600;
+            this["video-native-pixel-width"] = 800;
+            this["video-bitrate"] = 768;
+        } else if (file.quality === "med") {
+            this["video-resolution-label"] = "medium";
+            this["nb-asset-type"] += " (medium res.)";
+            this["video-inline-pixel-height"] = 360;
+            this["video-inline-pixel-width"] = 480;
+            this["video-native-pixel-height"] = 360;
+            this["video-native-pixel-width"] = 480;
+            this["video-bitrate"] = 512;
+        } else {
+            this["nb-asset-type"] += " (low res.)";
+            this["video-inline-pixel-height"] = 240;
+            this["video-inline-pixel-width"] = 320;
+            this["video-native-pixel-height"] = 240;
+            this["video-native-pixel-width"] = 320;
+            this["video-bitrate"] = 256;
+        }
+        break;
+    case "xml":
+        this["nb-asset-type"] = "video closed-caption file";
+        break;
+    case "vtt":
+        this["nb-asset-type"] = "video closed-caption file";
+        break;
+    case "jpg":
+        this["nb-asset-type"] = "video poster image";
+        break;
+    case "txt":
+        this["nb-asset-type"] = "video transcript";
+        break;
+    case "swf":
+        this["nb-asset-type"] = "flash";
+        this["flash-pixel-height"] = 595;
+        this["flash-version"] = 7;
+        break;
+	case "html":
+	case "css":
+	case "js":
+	case "json":
+	case "png":
+	case "ico":
+	case "svn":
+		if (file.name  === "index.html"){
+			this["nb-asset-type"] = "html landing page";
+		}
+		else {this["nb-asset-type"] = "html component";}
+		break;
+    default:
+        this["nb-asset-type"] = "UNKNOWN";
+        break;
+    }
+}
+Asset.prototype.title = "";
+Asset.prototype.credit = "Copyright &copy; Cengage Learning.";
+Asset.prototype["alt-text"] = "";
+Asset.prototype["caption-text"] = "";
+Asset.prototype["nb-collection-title-display"] = "false";
+
+function tablemaker() {
+
+	if (window.myAppSettings.htmlDirs.length) {
+		$.each(window.myAppSettings.htmlDirs, function(index,regex){
+		
+				var regexep = new RegExp(regex);
+				
+			 $.each(data,function(key,value){
+			 
+				if (regexep.test(value.filename) && value["nb-asset-type"] != "html landing page") {
+					value["nb-asset-type"] = "html component";
+				}
+			 })
+			 
+		})
+	}
+
+    var limit = 10;
+    var pages = Math.ceil(data.length / 10);
+    var frag = document.createDocumentFragment();
+    var pagination = document.getElementById('pagination');
+	while(pagination.hasChildNodes())
+	pagination.removeChild(pagination.firstChild);
+	
+    for (pages; pages > 0; pages--) {
+        var a = document.createElement("a");
+        a.innerHTML = pages;
+        a.href = "#" + pages;
+        frag.appendChild(a);
+    }
+    pagination.appendChild(frag);
+	if (pagination.lastChild) {
+		pagination.lastChild.click()
+	}
+	
+    var getData = (function() {
+        return function() {
+            var page = parseInt(window.location.hash.replace('#', ''), 10) || 1,
+                row = (page - 1) * limit,
+                count = page * limit,
+                part = [];
+            for (; row < count; row++) {
+                part.push(data[row]);
+            }
+            return part;
+        };
+    })();
+	
+    var $container = $("#dataTable");
+	
+    if ($('handsontable').length == 0) {
+        $container.handsontable({
+            data: getData(),
+            startRows: 5,
+            startCols: 5,
+			contextMenu: true,
+            colHeaders: colHeaders,
+            columns: [{
+                data: "filename"
+            }, {
+                data: "nb-asset-type"
+            }, {
+                data: "title"
+            }, {
+                data: "alt-text"
+            }, {
+                data: "caption-text"
+            }, {
+                data: "credit"
+            }, {
+                data: "nb-collection-title-display"
+            }, {
+                data: "video-resolution-label"
+            }, {
+                data: "video-inline-pixel-height"
+            }, {
+                data: "video-inline-pixel-width"
+            }, {
+                data: "video-native-pixel-height"
+            }, {
+                data: "video-native-pixel-width"
+            }, {
+                data: "video-bitrate"
+            }, {
+                data: "flash-pixel-height"
+            }, {
+                data: "flash-pixel-width"
+            }, {
+                data: "flash-version"
+            }, {
+                data: "flash-params"
+            }, {
+                data: "flash-variables"
+            }],
+            stretchH: 'all'
+        });
+    } else {
+        $container.handsontable('render');
+    }
+	exportCSV();
+    $(window).on('hashchange', function(event) {
+        $container.handsontable('loadData', getData());
+    });
+}
+
+function foundSWF() {
+                data[position - 2]["nb-asset-type"] = "flash poster image";
+                $container.handsontable('render');
+            }
+
+function foundIndex() {
+                data[position]["nb-asset-type"] = "index";
+                $container.handsontable('render');
+            }			
+
+function noSWF() {
+                nb_asset_type = "video poster image";
+            }
+            
+// Recursive directory read 
+// here we have access to the FileEntry object
+// entry needs file extension property
+
+function readDirectory(entries, $parentNode) {
+
+	if (entries === null) {return}
+	
+    for (i = 0; i < entries.length; i++) {
+	
+		if (entries[i] === null) {return}
+		
+        if (entries[i].isDirectory) {
+            appendItem(entries[i].name, 'folder', $parentNode);
+            var directoryReader = entries[i].createReader();
+            getAllEntries(
+            directoryReader, readDirectory, appendIndentList($parentNode));
+        } else {
+            
+            if (entries[i].name.slice(-4) == (".jpg" || "jpeg")) {
+                entries[i].getParent(function(dirEntry) {
+                    dirEntry.getFile(dirEntry.name + '.swf', {}, foundSWF, noSWF);
+                }, function(error) {
+                    nb_asset_type = error.name;
+                });
+				
+            }
+			else if (entries[i].name == "index.html") {
+				entries[i].getParent(function(dirEntry) {
+						
+						window.myAppSettings.htmlDirs.push(dirEntry.fullPath);
+						
+					}, function(error) {
+
+					console.log("failed to get parent = " + error);
+
+					});
+				
+			}
+            var position = data.push(new Asset(entries[i]));
+            appendItem(entries[i].name, 'file', $parentNode);
+            entries[i].file(appendFile, errorHandler);
+        }
+    }
+	
+    tablemaker();
+	
+}
+
+function appendFile(file) {
+    // if (file.type === 'text/plain')
+    //   appendTextFile(file);
+    var imageTypes = ['image/png', 'image/jpeg', 'image/gif'];
+    if (imageTypes.indexOf(file.type) > -1) appendImageFile(file);
+}
+
+function appendImageFile(file) {
+    appendContainer();
+    var fileReader = new FileReader();
+    fileReader.onload = function(e) {
+        var $node = $('#tree_box_content');
+        var $img = $('<img />');
+        $img.attr('src', e.target.result);
+        $node.append($img);
+    };
+    fileReader.readAsDataURL(file);
+}
+
+function appendTextFile(file) {
+    appendContainer();
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var $node = $('#tree_box_content');
+        var $div = $('<div></div>');
+        $node.text(e.target.result);
+        $node.append($div);
+    };
+    reader.readAsText(file);
+}
+// This is needed to get all directory entries as one 
+// call of readEntries may not return all items. Works a 
+// bit like stream reader.  
+
+function getAllEntries(directoryReader, callback, $parentNode) {
+    var entries = [];
+    var readEntries = function() {
+            directoryReader.readEntries(function(results) {
+                if (!results.length) {
+                    entries.sort();
+                    callback(entries, $parentNode);
+                } else {
+                    entries = entries.concat(toArray(results));
+                    readEntries();
+                }
+            }, errorHandler);
+        };
+    readEntries();
+}
+
+function toArray(list) {
+    return Array.prototype.slice.call(list || [], 0);
+}
+
+function errorHandler(e) {
+    alert('FileSystem API error code: ' + e.code);
+}
+// DOM stuff for appending HTML into page
+
+function clearLog() {
+    $('#tree_box_list').children().remove();
+    $('#tree_box_content').remove();
+}
+
+function appendStr(str) {
+    var $log = $('#tree_box_list');
+    var $li = $('<li></li>');
+    $log.append($li.text(str));
+}
+
+function appendItem(name, type, $parentNode) {
+    $li = $('<li></li>');
+    $li.html('<img src="images/' + type + '.png" />' + name);
+    $parentNode.append($li);
+}
+
+function appendIndentList($parentNode) {
+    var $li = $('<li></li>');
+    var $ul = $('<ul></ul>');
+    $li.append($ul);
+    $parentNode.append($li);
+    return $ul;
+}
+
+function appendContainer() {
+    if (!$('#tree_box_content').length) {
+        var $div = $('<div></div>');
+        $div.attr('id', 'tree_box_content');
+        $('#tree_box').append($div);
+    }
+}
+
+function isAPIAvailable() {
+    // Check for the various File API support.
+    if (window.File && window.FileReader && window.FileList && window.Blob) {
+        // Great success! All the File APIs are supported.
+        return true;
+    } else {
+        // source: File API availability - http://caniuse.com/#feat=fileapi
+        // source: <output> availability - http://html5doctor.com/the-output-element/
+        document.writeln('The HTML5 APIs used in this form are only available in the following browsers:<br />');
+        // 6.0 File API & 13.0 <output>
+        document.writeln(' - Google Chrome: 13.0 or later<br />');
+        // 3.6 File API & 6.0 <output>
+        document.writeln(' - Mozilla Firefox: 6.0 or later<br />');
+        // 10.0 File API & 10.0 <output>
+        document.writeln(' - Internet Explorer: Not supported (partial support expected in 10.0)<br />');
+        // ? File API & 5.1 <output>
+        document.writeln(' - Safari: Not supported<br />');
+        // ? File API & 9.2 <output>
+        document.writeln(' - Opera: Not supported');
+        return false;
+    }
+}
+
+function handleFileSelect(evt) {
+    var files = evt.target.files; // FileList object
+    var file = files[0];
+    // read the file metadata
+    var output = '';
+    output += '<span style="font-weight:bold;">' + escape(file.name) + '</span><br />\n';
+    output += ' - FileType: ' + (file.type || 'n/a') + '<br />\n';
+    output += ' - FileSize: ' + file.size + ' bytes<br />\n';
+    output += ' - LastModified: ' + (file.lastModifiedDate ? file.lastModifiedDate.toLocaleDateString() : 'n/a') + '<br />\n';
+    // read the file contents
+    printTable(file);
+    // post the results
+    $('#list').append(output);
+}
+
+function printTable(file) {
+    var reader = new FileReader();
+    reader.readAsText(file);
+    reader.onload = function(event) {
+        var csv = event.target.result;
+        var columns = csv.match(/^.*$/m)[0].split(",");
+        var csvData = $.csv.toObjects(csv);
+		var newData = {}; //associative array
+        if ($.inArray("filename", columns) == -1) {
+            alert("I need fiilenames");
+            console.log('I need filenames');
+            return;
+        } else if (data.length === 0) {
+            $.each(csvData, function(cIndex, cValue) {
+                var asset = new Asset(cValue);
+                asset.setter(cValue); // new Asset should be able to set, maybe 
+                data.push(asset);
+            });
+            tablemaker();
+        }
+        else {  // iter over data object and csv object looking for filename key. extend data object with csv object if they have shared key
+                $.each(csvData, function(cIndex, cValue) {
+                    cFilename = cValue.filename.split('/').pop() || cValue;
+                    cBase = cFilename.slice(0, -4).replace(/_(hi|lo|med)$/, "");
+					$.each(data, function(dIndex, dValue) {
+						dFilename = dValue.filename.split('/').pop();
+						dBase = dFilename.slice(0, -4).replace(/_(hi|lo|med)$/, "");
+							if (cFilename == dFilename) {
+								dValue.setter(cValue);
+							} else if (dBase == cBase) {
+								//set metadata against all basenames
+								var cClone = $.extend({}, cValue);
+								// we do not want to delete the filename in the CSV object as it is the "database" key
+								delete cClone.filename;
+								dValue.setter(cClone);
+							}
+							else { 
+								// add to associate array, so "non-key" ^ data only gets added once, though we'll likely hit it in multiple iters
+								newData[cFilename] = cValue;
+							}
+					});
+                });
+			console.dir(newData);	
+			$.each(newData, function(index, value) {
+				var asset = new Asset(value);
+				console.dir(asset);
+				asset.setter(value); // new Asset should be able to set, this seems redundant
+				data.push(asset);	
+			});
+			tablemaker();	
+        }
+    };
+    reader.onerror = function() {
+        alert('Unable to read ' + file.fileName);
+    };
+}
+
+function exportCSV() {
+    window.URL = window.URL || window.webkitURL;
+    var csvArray = [colHeaders];
+    $.each(data, function(dk, dv) {
+        var row = [];
+        $.each(colHeaders, function(ck, cv) {
+            row.push(dv[cv]);
+        });
+        csvArray.push(row);
+    });
+    var blob = new Blob([CSV.arrayToCsv(csvArray)], {
+        type: 'text/csv'
+    });
+    var $anchor = $("<a download='metadata.csv'>Download CSV</a>");
+    var url = window.URL.createObjectURL(blob);
+    $anchor.attr({
+        href: url
+    });
+    $('#download').empty().append($anchor);
+}
+
+
+
+var colHeaders = ['filename', 'nb-asset-type', 'title', 'alt-text', 'caption-text', 'credit', 'nb-collection-title-display', 'video-resolution-label', 'video-inline-pixel-height', 'video-inline-pixel-width', 'video-native-pixel-height', 'video-native-pixel-width', 'video-bitrate', 'flash-pixel-height', 'flash-pixel-width', 'flash-version', 'flash-params', 'flash-variables'];
+var data = [];
+$(document).ready(function() {
+    // jQuery creates it's own event object, and it doesn't have a
+    // dataTransfer property yet. This adds dataTransfer to the event object.
+    $.event.props.push('dataTransfer');
+    var $node = $('#tree_box');
+    if (isAPIAvailable()) {
+        $('#files').bind('change', handleFileSelect);
+    }
+    $node.on('dragover', function(e) {
+        e.preventDefault();
+        $(this).addClass('over_line');
+    });
+    $node.on('dragleave', function(e) {
+        e.preventDefault();
+        $(this).removeClass('over_line');
+    });
+    $node.on('drop', function(e) {
+        e.preventDefault();
+        var $parentNode = $('#tree_box_list');
+        var length = e.dataTransfer.items.length;
+        if (length > -1) {
+            clearLog();
+        }
+        for (var i = 0; i < length; i++) {
+            var entries = [];
+            entries[0] = e.dataTransfer.items[i].webkitGetAsEntry();
+            readDirectory(entries, $parentNode);
+        }
+        $(this).removeClass('over_line');
+    });
+    var $btn = $('#clear_logs');
+    $btn.click(function(e) {
+        clearLog();
+        appendStr('Drag and drop folder here');
+    });
+	
+	$('#replace').click( function(e) {
+		var pattern = $("#pattern").val();
+		var replace = $("#replacement").val();
+		$.each(data, function(i, val){
+			val.replacePaths(replace,pattern);
+			val.filename = val.get('fullPath');
+		});
+		tablemaker();	
+	});
+	
+	$("#normal").click(function(e) {
+		$.each(data, function(i, val){
+			var newPath =  val.get('parts').slice(0,-1).join('.').replace(/(_lo|_hi|_med|\.adb)$/, "");
+			val.replacePaths(newPath,".*");
+			val.filename = val.get('fullPath');
+		});
+	});
+});
+	</script>
+		<link href='http://fonts.googleapis.com/css?family=Rokkitt|Source+Code+Pro|Coda|Roboto' rel='stylesheet' type='text/css'>
+		<link rel="stylesheet" media="screen" href="css/jquery.handsontable.full.css"> 
+        <style>
+		body {
+			font-family: 'Roboto', sans-serif;
+		}
+		
+		h1, h2, h3 {
+			font-family: 'Source Code Pro', sans-serif;
+		}
+		
+        .over_line{
+            border-color: #ff6000 !important;
+        }
+        
+        #tree_box{
+            border: 1px dashed #bbb;
+            border-radius: 6px 6px 6px 6px;
+            margin: 10px 0 10px 0;
+            padding: 20px 10px 20px 10px;
+        }
+        
+        #tree_box ul{
+            list-style: none;
+            margin: 0;
+        }       
+        
+         #tree_box img{
+            vertical-align: middle;
+            margin-right: 4px;
+            border: none;
+        }
+        
+        #tree_box_content
+        {
+            margin-top: 10px;
+            border-top: 1px #E7E7E7;
+            padding-top: 10px;
+            padding-left: 16px;
+        }
+		
+		#pagination {
+			padding: 20px 0;
+		}
+		
+		#pagination a {
+			border: 1px solid grey;
+			padding: 2px 5px;
+			float: right;
+			margin-right: 1em;
+		}
+		a {
+			text-decoration: none;
+			color: #4267B6;
+			cursor: pointer;
+			}
+			
+		big {
+			font-size: 24px;
+			}
+			
+		input, button {
+		margin-top: 1em;
+		}
+			
+        </style>
+  
+		
+	</head>
+	
+	<body class="home">
+	
+		<div id="wrapper">
+
+			<header id="site_header" role="banner">
+				<hgroup id="branding">
+					<img src="images/metadata.fw.png" />
+					<h1 id="site_title">MindTap Metadata Maker</a></h1>				
+					<h2 id="tag">beta 0.4</h2>
+				</hgroup>
+			</header>
+
+		
+			<div id="content" role="main">
+
+	            <article class="post type_post hentry">
+		            
+		            <div class="entry_content">
+
+
+
+                   
+                    <p>
+                    This demo allows you to drag and drop a folder into the dropzone below. The page will display the directory 
+                    and file structure as a tree. It will also display png, jpeg and gif files it finds within the 
+                    folder structure. Beneath, a fully editable Metadata spreadsheet will be generated, which you can export to .csv.  You can also merge or populate the spreadsheet  from scratch which an additional csv. 
+					At the moment <strong>this tool only definitively works with Chrome 21 or higher</strong></p>
+
+
+                    <p><strong id="log_name"></strong></p>
+
+                    <div id="tree_box">
+                        <ul id="tree_box_list" aria-dropeffect="copy execute"> 
+                            <li><em>Drag-and-drop folder here</em> <big>&#9758;</big></li>
+                        </ul>
+                    </div>
+
+                    <button id="clear_logs" class="buttonesque" type="button">Clear File Tree</button>
+                    </div>
+	            </article>
+				
+				<article>
+					<div id="dataTable" style="width: 300px, height: 300px; overflow: scroll"></div>
+					<div id="pagination"></div>
+					<div id="download"></div>
+					<div>Pattern (regex allowed): <input type="search" name="search" id="pattern" value="^/"> Replacement: <input type="search" name="search" id="replacement"> <button id="replace" class="buttonesque" type="button">Replace in paths</button></div>
+					<div><button id="normal" class="buttonesque" type="button">Normalize Paths</button></div>
+					<hr />
+				</article>
+				
+				<article>
+					<div id=inputs class=clearfix>
+					<label>Merge/Apply metadata .csv:</label><br />
+				  <input type=file id=files name=files[] multiple label="Merge metadata .csv:"></input>
+				</div>
+				<hr />
+				<output id=list>
+				</output>
+				
+				<hr />
+				</article>
+				
+
+            </div> <!-- end content -->
+
+         
+
+			<footer id="site_footer" role="contentinfo">
+			    <small class="vcard">2013 <a class="fn url" href="mailto:james.fishwick@cengage.com" rel="me author">James Fishwick</a> </small></p>
+            </footer>
+		
+		</div>
+        
+         
+	</body>
+</html>

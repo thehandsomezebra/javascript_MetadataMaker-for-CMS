@@ -1,0 +1,344 @@
+
+body {
+    font-family: Verdana, Geneva, sans-serif;
+    font-size: 13px;
+    color: #333;
+}
+
+
+.wrapper {
+    margin: 1em;
+    position: relative;
+    padding-left: 2em;
+    /* line-height of .wrapper div:first-child span */
+}
+
+.wrapper header {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 2em;
+    /* line-height of .wrapper div:first-child span */
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.wrapper header h1 {
+    -moz-transform-origin: 0 50%;
+    -moz-transform: rotate(-90deg) translate(-50%, 50%);
+    -webkit-transform-origin: 0 50%;
+    -webkit-transform: rotate(-90deg) translate(-50%, 50%);
+    -o-transform-origin: 0 50%;
+    -o-transform: rotate(-90deg) translate(-50%, 50%);
+    -ms-transform-origin: 0 50%;
+    -ms-transform: rotate(-90deg) translate(-50%, 50%);
+    transform-origin: 0 50%;
+    transform: rotate(-90deg) translate(-50%, 50%);
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    height: 2em;
+    /* line-height of .wrapper div:first-child span */
+    margin: auto;
+    font-weight: bold;
+    font-size: 1em;
+    line-height: 2em;
+    /* Copy to other locations */
+}
+
+.wrapper article {
+    display: inline-block;
+    vertical-align: middle;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    -ms-box-sizing: border-box;
+    -o-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+
+section {
+    width: 100%;
+    margin: auto;
+    padding: 10px;
+}
+
+div#one {
+    width: 50%;
+    float: left;
+}
+
+div#two {
+    margin-left: 50%;
+}
+
+.collapsible {
+    background-color: #777;
+    color: white;
+    cursor: pointer;
+    padding: 18px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 15px;
+}
+
+.activec,
+.collapsible:hover {
+    background-color: #555;
+}
+
+.collapsible:after {
+    content: '\002B';
+    color: white;
+    font-weight: bold;
+    float: right;
+    margin-left: 5px;
+}
+
+.activec:after {
+    content: "\2212";
+}
+
+.content {
+    padding: 0 18px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+    background-color: white;
+}
+
+.hero-unit {
+    overflow: hidden !important;
+    padding: 10px !important;
+    font-size: 11px !important;
+}
+
+.table th,
+.table td {
+    padding: 8px;
+    line-height: 14px !important;
+}
+
+table {
+    width: 100%;
+    margin-bottom: 1em;
+    border-collapse: collapse;
+}
+
+th {
+    font-weight: bold;
+    background-color: #ddd;
+}
+
+th,
+td {
+    padding: 0.5em;
+    border: 1px solid #ccc;
+}
+
+.table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.table tbody {
+    display: block;
+    width: 100%;
+    overflow: auto;
+    height: min-content;
+    max-height: 400px;
+}
+
+#drop-target {
+    border: 10px dashed #999;
+    text-align: center;
+    color: #999;
+    font-size: 20px;
+    height: 280px;
+    cursor: pointer;
+}
+
+#drop-target.dragover,
+#drop-target:hover {
+    background: rgba(255, 255, 255, 0.4) !important;
+    border-color: lightgray !important;
+}
+
+.tab {
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+}
+
+/* Style the buttons that are used to open the tab content */
+.tab button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+    background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+    background-color: #ccc;
+}
+
+/* Style the tab content */
+.tabcontent {
+    display: none;
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-top: none;
+}
+
+@keyframes glowing {
+  0% { box-shadow: 0 0 -5px #aaa; }
+  40% { box-shadow: 0 0 15px #aaa; }
+  60% { box-shadow: 0 0 15px #aaa; }
+  100% { box-shadow: 0 0 -5px #aaa; }
+}
+
+.button-glow {
+  animation: glowing 5000ms infinite;
+}
+.UrSuchACoolButton {
+    text-decoration: none;
+    color: #000;
+    background-color: #ddd;
+    border: 1px solid #ccc;
+    padding: 8px;
+	font-size: 14px;
+}
+
+.imacoolbox {
+    border: 2px solid gray;
+    border-radius: 5px;
+    padding: 5px;
+    background-color: white;
+    margin: 5px;
+}
+
+/* Popup container - can be anything you want */
+.popup {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* The actual popup */
+.popup .popuptext {
+    visibility: hidden;
+    width: 160px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -80px;
+    line-height: initial;
+}
+
+/* Popup arrow */
+.popup .popuptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #555 transparent transparent transparent;
+}
+
+/* Toggle this class - hide and show the popup */
+.popup .show {
+    visibility: visible;
+    -webkit-animation: fadeIn 1s;
+    animation: fadeIn 1s;
+}
+
+/* Add animation (fade in the popup) */
+@-webkit-keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+
+td:focus {
+    -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 6px #7ab5d3;
+    -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 6px #7ab5d3;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 6px #7ab5d3;
+    outline: rgb(91, 157, 217) auto 5px;
+}
+
+input.error {
+    -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 6px red;
+    -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 6px red;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 6px red;
+    outline: thin auto red;
+}
+
+
+#mainTable thead th,
+#mainTable tbody td {
+    width: 25%;
+}
+
+#mainTable td+td,
+#mainTable th+th {
+    text-align: right;
+}
+
+table.scrollable thead tr,
+table.scrollable tfoot tr {
+    position: relative;
+    display: block
+}
+
+html>body table.scrollable tbody {
+    display: block;
+    height: 330px;
+    overflow: auto;
+    width: 100%
+}
+
+html>body table.scrollable td,
+html>body table.scrollable th {
+    width: 200px
+}
