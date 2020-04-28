@@ -1150,7 +1150,11 @@ function NormalizePathsToLoadToVideoFolder() {
 	
 	v1.0g 8-1-2019 PATCH. Stephanie Frantz
 	- Last fix created / at the front of each line -- removed them in Normalize by checking if the first character is a slash, remove it.
-	-->
+	
+	v1.0h 4-28-2020 PATCH. Stephanie Frantz
+	- Fix adjusts output csv to check for double quotes (and escape them) and then check for commas, and wrap that data in a double quote.  This fixes the error where titles/captions (etc) had a comma and the data skipped because it was treated as a delimiter rather than a comma in the desired text.
+
+-->
     <small class="vcard"><a href="v04beta/index.html">v0.4</a>: 2013 <a href="">James Fishwick</a></small>
 	</footer>
   </body>
