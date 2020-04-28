@@ -380,10 +380,13 @@ function exportTableToCSV($table, filename) {
                 var $col = $(col),
                     text = $col.text();
 		    console.log(text);
+		    
+		    text.replace(/"/g, '""');// escape double quotes that are in the text itself
+		    //and now add in double quotes if there's a comma, so that things don't jump to the next line.
 		   if (text.indexOf(',') > -1)
 		    { text = ('"' + text + '"')
 		    }
-                //return text.replace(/"/g, '""'); // escape double quotes
+		   
 		return text
             }).get().join(tmpColDelim);
         }).get().join(tmpRowDelim)
