@@ -379,6 +379,7 @@ function exportTableToCSV($table, filename) {
             return $cols.map(function(j, col) {
                 var $col = $(col),
                     text = $col.text();
+		    console.log(text);
                 return text.replace(/"/g, '""'); // escape double quotes
             }).get().join(tmpColDelim);
         }).get().join(tmpRowDelim)
