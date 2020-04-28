@@ -383,7 +383,8 @@ function exportTableToCSV($table, filename) {
 		   if (text.indexOf(',') > -1)
 		    { text = ('"' + text + '"')
 		    }
-                return text.replace(/"/g, '""'); // escape double quotes
+                //return text.replace(/"/g, '""'); // escape double quotes
+		return text
             }).get().join(tmpColDelim);
         }).get().join(tmpRowDelim)
         .split(tmpRowDelim).join(rowDelim)
